@@ -288,7 +288,6 @@ const std::map<OptionNumber, OptProp> OptStore {
   },
 };
 
-
 }   // namespace coap
 
 #endif  // COAP_OPTSTORE_H_

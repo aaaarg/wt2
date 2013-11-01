@@ -7,7 +7,6 @@
 using namespace coap;
 
 void test_print() {
-
   // A fancy header...
   std::cout << "No ; C ; U; N; R; Name; Format; Length; Default;\n";
 
@@ -25,10 +24,11 @@ void test_print() {
               << prop.name() << "; "
               << static_cast<unsigned int>(prop.format()) << "; "
               << prop.min_length() << "-" << prop.max_length() << "; "
-              << ((prop.default_value() != nullptr) ? prop.default_value() : "(none)")
+              << ((prop.default_value() != nullptr)
+                  ? prop.default_value()
+                  : "(none)")
               << ";\n";
   }
-
 }
 
 int main() {

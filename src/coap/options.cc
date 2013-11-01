@@ -9,7 +9,7 @@ bool Option::Encode(size_t& option_base, std::vector<uint8_t>& buf) const {
   utils::Log* L = utils::Log::Instance();
 
   // handle payload marker
-  if (type_ == OptionFormat::marker) {
+  if (format_ == OptionFormat::marker) {
     buf.push_back(0xFF);
     return true;
   }
@@ -45,7 +45,11 @@ bool Option::Encode(size_t& option_base, std::vector<uint8_t>& buf) const {
     L->Debug("encoding failed: length is out-of-range (%zu)", length);
     return false;
   }
- 
+
+  // Encode value
+  std::copy(raw_.begin(), raw_.end(), std::back_inserter(buf));
+
+  option_base += delta;
   return true;
 }
 
@@ -64,6 +68,7 @@ bool Option::Decode(size_t& option_base, const std::vector<uint8_t>& buf,
     //    |               |               |
     //    +---------------+---------------+
     //
+    L->Debug("at offset %zu\n", offset); 
     size_t delta = (buf.at(offset) & 0xF0) >> 4;
     size_t length = buf.at(offset) & 0x0F;
 
@@ -77,7 +82,7 @@ bool Option::Decode(size_t& option_base, const std::vector<uint8_t>& buf,
       //  this value but the entire byte is not the payload marker,
       //  this MUST be processed as a message format error."
       if (length == 0xF) {
-        type_ = OptionFormat::marker;
+        format_ = OptionFormat::marker;
         return true;
       }
       L->Debug("badly formatted payload marker (0x%x%x)", delta, length);
@@ -114,6 +119,9 @@ bool Option::Decode(size_t& option_base, const std::vector<uint8_t>& buf,
       return false;
     }
 
+    // Set Option format based on stored info.
+    format_ = prop.format();
+
     //    +-------------------------------+
     //    \                               \
     //    /                               /
@@ -134,6 +142,7 @@ bool Option::Decode(size_t& option_base, const std::vector<uint8_t>& buf,
       }
       std::copy(&buf[offset], &buf[offset + length],
                 std::back_inserter(raw_));
+      offset += length;
     }
 
     return true;
@@ -147,7 +156,6 @@ bool Option::Decode(size_t& option_base, const std::vector<uint8_t>& buf,
 // XXX Expect the caller to catch out_of_range exceptions.
 bool Option::DecodeExtended(const std::vector<uint8_t>& buf, size_t& offset,
                             size_t& dl) {
-
   // +---------------+---------------+
   // \                               \
   // /         Option Delta          /   0-2 bytes
@@ -159,11 +167,11 @@ bool Option::DecodeExtended(const std::vector<uint8_t>& buf, size_t& offset,
   // +-------------------------------+
   switch (dl) {   // XXX check value is >= minuend !!!
     case 13:  // extended format: 1 byte
-      dl = buf.at(offset + 1) - 13;
+      dl = buf.at(offset) + 13;
       offset += 1;
       break;
     case 14:  // extended format: 2 bytes
-      dl = ntohs((buf.at(offset + 1) << 8) | buf.at(offset + 2)) - 269;
+      dl = ntohs((buf.at(offset) << 8) | buf.at(offset + 1)) + 269;
       offset += 2;
       break;
     default:
@@ -174,11 +182,25 @@ bool Option::DecodeExtended(const std::vector<uint8_t>& buf, size_t& offset,
 }
 
 bool Option::IsPayloadMarker() const {
-  return type_ == OptionFormat::marker;
+  return format_ == OptionFormat::marker;
 }
 
+void Option::set_format(OptionFormat format) {
+  format_ = format;
+}
+
+bool Option::set_num(OptionNumber num) {
+  // Look up option properties.
+  if (OptStore.find(num) == OptStore.end()) {
+    utils::Log::Instance()->Debug("option number (%d) not known", num);
+    return false;
+  }
+  num_ = num;
+  return true;
+};
+
 void Option::set_value(uint64_t v) {
-  type_ = OptionFormat::uint;
+  format_ = OptionFormat::uint;
 
   uint64_t ui_bytes[] = {
     (1ULL <<  8) - 1,
@@ -195,7 +217,7 @@ void Option::set_value(uint64_t v) {
   // "the number 0 is represented with an empty option value (a zero-length
   //  sequence of bytes)"
   if (v == 0) {
-    raw_.resize(0); // XXX is this needed?
+    raw_.resize(0);   // XXX is this needed?
     return;
   }
 
@@ -222,25 +244,25 @@ void Option::set_value(uint64_t v) {
 }
 
 void Option::set_value(const std::string& v) {
-  type_ = OptionFormat::string;
+  format_ = OptionFormat::string;
   std::copy(v.begin(), v.end(), std::back_inserter(raw_));
 }
 
 void Option::set_value(const std::vector<uint8_t>& v) {
-  type_ = OptionFormat::opaque;
+  format_ = OptionFormat::opaque;
   raw_ = v;
 }
 
 void Option::set_value() {
-  type_ = OptionFormat::empty;
+  format_ = OptionFormat::empty;
 }
 
 void Option::MakePayloadMarker() {
-  type_ = OptionFormat::marker;
+  format_ = OptionFormat::marker;
 }
 
 bool Option::value_string(std::string& v) {
-  if (type_ != OptionFormat::string)
+  if (format_ != OptionFormat::string)
     return false;
 
   v.clear();
@@ -250,7 +272,7 @@ bool Option::value_string(std::string& v) {
 }
 
 bool Option::value_uint(uint64_t& ui) {
-  if (type_ != OptionFormat::uint)
+  if (format_ != OptionFormat::uint)
     return false;
 
   size_t nbytes = raw_.size();
@@ -277,7 +299,7 @@ bool Option::value_uint(uint64_t& ui) {
 }
 
 bool Option::value_opaque(std::vector<uint8_t>& v) {
-  if (type_ != OptionFormat::opaque)
+  if (format_ != OptionFormat::opaque)
     return false;
   v = raw_;
   return true;
@@ -285,6 +307,87 @@ bool Option::value_opaque(std::vector<uint8_t>& v) {
 
 void Option::value(std::vector<uint8_t>& v) {
   v = raw_;
+}
+
+OptionNumber Option::num() const {
+  // XXX should check whether returned option number is valid.
+  return static_cast<OptionNumber>(num_);
+}
+
+OptionFormat Option::format() const {
+  return format_;
+}
+
+bool Options::Add(const Option& opt) {
+  // TODO check opt is valid or just throw anything in?
+  return map_.insert(std::make_pair(opt.num(), opt)) != map_.end();
+}
+
+bool Options::Encode(std::vector<uint8_t>& buf) const {
+  utils::Log* L = utils::Log::Instance();
+
+  size_t obase = 0;
+
+  // Encode options on order.
+  for (auto it : map_) {
+    auto opt = it.second; 
+
+    if (!opt.Encode(obase, buf)) {
+      L->Debug("Options encoding failed at base %zu", obase);
+      return false;
+    }
+  }
+
+  // Add payload marker.
+  buf.push_back(0xFF);
+
+  return true;
+}
+
+bool Options::Decode(const std::vector<uint8_t>& buf) {
+  utils::Log* L = utils::Log::Instance();
+
+  size_t obase = 0;
+  size_t offset = 0;
+  size_t buf_size = buf.size();
+
+  while (offset < buf_size) {
+    Option opt;
+
+    if (!opt.Decode(obase, buf, offset)) {
+      L->Debug("Options decoding failed at (offset, base) = (%zu, %zu)",
+               offset, obase);
+      return false; 
+    }
+
+    // When the payload marker is seen, we're done.
+    if (opt.IsPayloadMarker())
+      return true;
+  }
+
+  // We reach here only if we've gone through the whole buffer
+  // without stumbling upon the payload marker.
+  return false;
+}
+
+bool Options::AddIfMatch(const std::vector<uint8_t>& etag) {
+  Option opt;
+
+  opt.set_num(If_Match);
+  opt.set_format(OptionFormat::opaque);
+  opt.set_value(etag);
+
+  return Add(opt);
+}
+
+bool Options::AddUriHost(const std::string& uri_host) {
+  Option opt;
+
+  opt.set_num(Uri_Host);
+  opt.set_format(OptionFormat::string);
+  opt.set_value(uri_host);
+
+  return Add(opt);
 }
 
 }   // namespace coap

@@ -6,12 +6,11 @@
 #include <arpa/inet.h>
 #include <err.h>
 
-#include <tuple>
 #include <vector>
-#include <iostream>
 #include <string>
 #include <algorithm>
 #include <stdexcept>
+#include <map>
 
 #include "utils/log.h"
 #include "coap/proto.h"
@@ -22,18 +21,17 @@ namespace coap {
 class Option {
  public:
   Option()
-    : type_(OptionFormat::unset)
+    : format_(OptionFormat::unset)
   { }
 
-  ~Option() { }
+  ~Option() = default;
 
   bool IsPayloadMarker() const;
   void MakePayloadMarker();
 
-  bool set_num(OptionNumber num) {
-    // TODO lookup store
-    return true; 
-  };
+  bool set_num(OptionNumber num);
+
+  void set_format(OptionFormat format);
 
   void set_value(uint64_t v);
   void set_value(const std::string& v);
@@ -45,6 +43,9 @@ class Option {
   bool value_opaque(std::vector<uint8_t>& v);
   void value(std::vector<uint8_t>& v);
 
+  OptionNumber num() const;
+  OptionFormat format() const;
+
   bool Decode(size_t&obase, const std::vector<uint8_t>& buf, size_t& offset);
   bool Encode(size_t&obase, std::vector<uint8_t>& buf) const;
 
@@ -53,21 +54,33 @@ class Option {
 
  private:
   size_t num_;
-  OptionFormat type_;
+  OptionFormat format_;
   std::vector<uint8_t> raw_;
 };
 
+// TODO(tho)
+// interfaces:
+//  add(name==number, value)
+//  encode(to vector)
+//  decode(from vector)
+//  get(name==number) -> value
+//  iterator (provides ordered walk)
+// internals:
+//  std::multimap<name==number, value>  // allows repetition
 class Options {
-  // TODO(tho)
-  // interfaces:
-  //  add(name==number, value)
-  //  encode(to vector)
-  //  decode(from vector)
-  //  get(name==number) -> value
-  //  iterator (provides ordered walk)
-  // internals:
-  //  std::multimap<name==number, value>  // allows repetition
-  //  option value is conceptually an union or a polymorphic object (int, string, opaque)
+ public:
+  Options() = default;
+  ~Options() = default;
+
+  bool AddIfMatch(const std::vector<uint8_t>& etag);
+  bool AddUriHost(const std::string& uri_host);
+
+  bool Add(const Option& opt);
+  bool Encode(std::vector<uint8_t>& buf) const;
+  bool Decode(const std::vector<uint8_t>& buf);
+
+ private:
+  std::multimap<OptionNumber, Option> map_;
 };
 
 }   // namespace coap

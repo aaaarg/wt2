@@ -28,7 +28,7 @@ void test_ok_codec() {
 }
 
 void test_ko_unsupported_version() {
-  std::vector<std::vector<uint8_t>> bins { 
+  std::vector<std::vector<uint8_t>> bins {
     { 0x00 }, // 0
     { 0x80 }, // 2
     { 0xC0 }  // 3
