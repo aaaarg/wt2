@@ -199,18 +199,14 @@ void test_ok_codec_multi() {
 int main() {
   init_log();
 
-#if 0
   test_ok_set_integer();
   test_ok_simple();
   test_ok_payload_marker();
   test_ok_codec();
-#endif
   test_ok_codec_multi();
 
-#if 0
   test_ko_bad_length();
   test_ko_bad_payload_marker();
   test_ko_unknown_option();
   test_ko_out_of_range_length();
-#endif
 }
