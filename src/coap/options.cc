@@ -68,7 +68,6 @@ bool Option::Decode(size_t& option_base, const std::vector<uint8_t>& buf,
     //    |               |               |
     //    +---------------+---------------+
     //
-    L->Debug("at offset %zu\n", offset); 
     size_t delta = (buf.at(offset) & 0xF0) >> 4;
     size_t length = buf.at(offset) & 0x0F;
 
