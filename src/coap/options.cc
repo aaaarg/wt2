@@ -164,7 +164,7 @@ bool Option::DecodeExtended(const std::vector<uint8_t>& buf, size_t& offset,
   // /         Option Length         /   0-2 bytes
   // \          (extended)           \
   // +-------------------------------+
-  switch (dl) {   // XXX check value is >= minuend !!!
+  switch (dl) {
     case 13:  // extended format: 1 byte
       dl = buf.at(offset) + 13;
       offset += 1;
