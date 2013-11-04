@@ -79,10 +79,29 @@ class Options {
  public:
   bool AddIfMatch(const std::vector<uint8_t>& etag);
   bool AddUriHost(const std::string& uri_host);
+  bool AddETag(const std::vector<uint8_t>& etag);
+#if TODO_EMPTY_VALUE_SETTER
+  bool AddIfNoneMatch();
+#endif
+  bool AddUriPort(uint64_t uri_port);
+  bool AddLocationPath(const std::string& location_path);
+  bool AddUriPath(const std::string& uri_path);
+  bool AddContentFormat(uint64_t content_format);
+  bool AddMaxAge(uint64_t max_age);
+  bool AddUriQuery(const std::string& uri_query);
+  bool AddAccept(uint64_t content_format);
+  bool AddLocationQuery(const std::string& location_query);
+  bool AddProxyUri(const std::string& proxy_uri);
+  bool AddProxyScheme(const std::string& proxy_scheme);
+  bool AddSize1(uint64_t sz);
 
-  bool Add(const Option& opt);
   bool Encode(std::vector<uint8_t>& buf) const;
   bool Decode(const std::vector<uint8_t>& buf);
+
+ private:
+  template <typename Tp>
+  bool Add(OptionNumber opt_num, const Tp& val);
+  bool DoAdd(const Option& opt);
 
  public:
   class iterator

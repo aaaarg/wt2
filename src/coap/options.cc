@@ -6,6 +6,41 @@
 namespace coap {
 
 //
+// Some useful stuff.
+//
+template <typename Tp>
+size_t bytes_when_encoded(const Tp& v) {
+  return v.size();
+}
+
+template <>
+size_t bytes_when_encoded<uint64_t>(const uint64_t& v) {
+  uint64_t ui_bytes[] = {
+    (1ULL <<  8) - 1,
+    (1ULL << 16) - 1,
+    (1ULL << 24) - 1,
+    (1ULL << 32) - 1,
+    (1ULL << 40) - 1,
+    (1ULL << 48) - 1,
+    (1ULL << 56) - 1,
+    UINT64_MAX
+  };
+
+  size_t needed_bytes = 0;
+
+  // Pick size:
+  // "a sender SHOULD represent the integer with as few bytes as possible".
+  for (size_t i = 0; i < (sizeof ui_bytes / sizeof(uint64_t)); ++i) {
+    if (ui_bytes[i] >= v) {
+      needed_bytes = i + 1;
+      break;
+    }
+  }
+
+  return needed_bytes;
+}
+
+//
 // class Option
 //
 
@@ -206,17 +241,6 @@ bool Option::set_num(OptionNumber num) {
 void Option::set_value(uint64_t v) {
   format_ = OptionFormat::uint;
 
-  uint64_t ui_bytes[] = {
-    (1ULL <<  8) - 1,
-    (1ULL << 16) - 1,
-    (1ULL << 24) - 1,
-    (1ULL << 32) - 1,
-    (1ULL << 40) - 1,
-    (1ULL << 48) - 1,
-    (1ULL << 56) - 1,
-    UINT64_MAX
-  };
-
   // Special case 0:
   // "the number 0 is represented with an empty option value (a zero-length
   //  sequence of bytes)"
@@ -225,16 +249,7 @@ void Option::set_value(uint64_t v) {
     return;
   }
 
-  size_t needed_bytes = 0;
-
-  // Pick size:
-  // "a sender SHOULD represent the integer with as few bytes as possible".
-  for (size_t i = 0; i < (sizeof ui_bytes / sizeof(uint64_t)); ++i) {
-    if (ui_bytes[i] >= v) {
-      needed_bytes = i + 1;
-      break;
-    }
-  }
+  size_t needed_bytes = bytes_when_encoded(v);
 
   raw_.resize(needed_bytes);
 
@@ -333,8 +348,8 @@ std::ostream& operator<< (std::ostream& out, const Option& opt) {
 //
 // class Options
 //
-bool Options::Add(const Option& opt) {
-  // TODO(tho) check opt is valid or just throw anything in?
+bool Options::DoAdd(const Option& opt) {
+  // Assume the given option has been validated (XXX should be private?)
   return map_.insert(std::make_pair(opt.num(), opt)) != map_.end();
 }
 
@@ -380,7 +395,7 @@ bool Options::Decode(const std::vector<uint8_t>& buf) {
       return true;
 
     // Insert decoded Option in the store.
-    if (!Add(opt))
+    if (!DoAdd(opt))
       return false;
   }
 
@@ -389,24 +404,84 @@ bool Options::Decode(const std::vector<uint8_t>& buf) {
   return false;
 }
 
-bool Options::AddIfMatch(const std::vector<uint8_t>& etag) {
+template <typename Tp>
+bool Options::Add(OptionNumber opt_num, const Tp& val) {
+  size_t needed_bytes = bytes_when_encoded(val);
+
+  auto prop = OptStore.find(opt_num)->second;
+
+  if (needed_bytes > prop.max_length() || needed_bytes < prop.min_length()) {
+    utils::Log::Instance()->Debug("out-of-range value len %zu", needed_bytes);
+    return false;
+  }
+
   Option opt;
+  opt.set_num(opt_num);
+  opt.set_format(prop.format());
+  opt.set_value(val);
 
-  opt.set_num(If_Match);
-  opt.set_format(OptionFormat::opaque);
-  opt.set_value(etag);
+  return DoAdd(opt);
+}
 
-  return Add(opt);
+bool Options::AddIfMatch(const std::vector<uint8_t>& etag) {
+  return Add(If_Match, etag);
 }
 
 bool Options::AddUriHost(const std::string& uri_host) {
-  Option opt;
+  return Add(Uri_Host, uri_host);
+}
 
-  opt.set_num(Uri_Host);
-  opt.set_format(OptionFormat::string);
-  opt.set_value(uri_host);
+bool Options::AddETag(const std::vector<uint8_t>& etag) {
+  return Add(ETag, etag);
+}
 
-  return Add(opt);
+#if TODO
+bool Options::AddIfNoneMatch() {
+}
+#endif
+
+bool Options::AddUriPort(uint64_t uri_port) {
+  return Add(Uri_Port, uri_port);
+}
+
+bool Options::AddLocationPath(const std::string& location_path) {
+  return Add(Location_Path, location_path);
+}
+
+bool Options::AddUriPath(const std::string& uri_path) {
+  return Add(Uri_Path, uri_path);
+}
+
+bool Options::AddContentFormat(uint64_t content_format) {
+  return Add(Content_Format, content_format);
+}
+
+bool Options::AddMaxAge(uint64_t max_age) {
+  return Add(Max_Age, max_age);
+}
+
+bool Options::AddUriQuery(const std::string& uri_query) {
+  return Add(Uri_Query, uri_query);
+}
+
+bool Options::AddAccept(uint64_t content_format) {
+  return Add(Accept, content_format);
+}
+
+bool Options::AddLocationQuery(const std::string& location_query) {
+  return Add(Location_Query, location_query);
+}
+
+bool Options::AddProxyUri(const std::string& proxy_uri) {
+  return Add(Proxy_Uri, proxy_uri);
+}
+
+bool Options::AddProxyScheme(const std::string& proxy_scheme) {
+  return Add(Proxy_Scheme, proxy_scheme);
+}
+
+bool Options::AddSize1(uint64_t sz) {
+  return Add(Size1, sz);
 }
 
 Options::iterator Options::begin() {
