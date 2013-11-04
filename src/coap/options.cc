@@ -5,6 +5,11 @@
 
 namespace coap {
 
+//
+// class Option
+//
+
+// TODO(tho) Should try & factor the delta/length encoder.
 bool Option::Encode(size_t& option_base, std::vector<uint8_t>& buf) const {
   utils::Log* L = utils::Log::Instance();
 
@@ -22,10 +27,10 @@ bool Option::Encode(size_t& option_base, std::vector<uint8_t>& buf) const {
   if (delta <= 12) {
     buf.push_back(delta << 4);
   } else if (delta >= 13 && delta <= 268) {
-    buf.push_back(13 << 4);
+    buf.push_back(13UL << 4);
     buf.push_back(delta - 13);
   } else if (delta >= 269 && delta <= (65535 + 269)) {
-    buf.push_back(14 << 4);
+    buf.push_back(14UL << 4);
     buf.push_back(delta - 269);
   } else {
     L->Debug("encoding failed: delta is out-of-range (%zu)", delta);
@@ -36,10 +41,10 @@ bool Option::Encode(size_t& option_base, std::vector<uint8_t>& buf) const {
   if (length <= 12) {
     buf[base] |= length;
   } else if (length >= 13 && length <= 268) {
-    buf[base] |= 13;
+    buf[base] |= 13UL;
     buf.push_back(length - 13);
   } else if (length >= 269 && length <= (65535 + 269)) {
-    buf[base] |= 14;
+    buf[base] |= 14UL;
     buf.push_back(length - 269);
   } else {
     L->Debug("encoding failed: length is out-of-range (%zu)", length);
@@ -317,8 +322,19 @@ OptionFormat Option::format() const {
   return format_;
 }
 
+// TODO(tho)
+std::ostream& operator<< (std::ostream& out, const Option& opt) {
+  out << "Num: " << opt.num_ << '\n'
+      << "Format: " << static_cast<size_t>(opt.format_) << '\n'
+      << "Raw size: " << opt.raw_.size();
+  return out;
+}
+
+//
+// class Options
+//
 bool Options::Add(const Option& opt) {
-  // TODO check opt is valid or just throw anything in?
+  // TODO(tho) check opt is valid or just throw anything in?
   return map_.insert(std::make_pair(opt.num(), opt)) != map_.end();
 }
 
@@ -362,6 +378,10 @@ bool Options::Decode(const std::vector<uint8_t>& buf) {
     // When the payload marker is seen, we're done.
     if (opt.IsPayloadMarker())
       return true;
+
+    // Insert decoded Option in the store.
+    if (!Add(opt))
+      return false;
   }
 
   // We reach here only if we've gone through the whole buffer
@@ -387,6 +407,65 @@ bool Options::AddUriHost(const std::string& uri_host) {
   opt.set_value(uri_host);
 
   return Add(opt);
+}
+
+Options::iterator Options::begin() {
+  return iterator(map_.begin(), map_.end());
+}
+
+Options::iterator Options::end() {
+  return iterator(map_.end(), map_.end());
+}
+
+size_t Options::count() const {
+  return map_.size();
+}
+
+//
+// class Options::iterator
+//
+bool Options::iterator::at_end() const {
+  return omap_cur_ == omap_end_; 
+}
+
+Options::iterator::iterator(OptionMap::iterator begin, OptionMap::iterator end) {
+  omap_cur_ = begin;
+  omap_end_ = end;
+}
+
+Options::iterator::reference Options::iterator::operator* () {
+  assert(omap_cur_ != omap_end_);
+  return omap_cur_->second;
+}
+
+bool Options::iterator::operator== (const iterator& other) const {
+  if (at_end() && other.at_end()) {
+    // Both are at end.
+    return true;
+  } else if (at_end() != other.at_end()) {
+    // One is at end, the other not.
+    return false;
+  } else {
+    // Both not at end: check whether they are pointing
+    // to the same Option item.
+    return omap_cur_ == other.omap_cur_;
+  }
+}
+
+bool Options::iterator::operator!= (const iterator& other) const {
+  return !(*this == other);
+}
+
+Options::iterator& Options::iterator::operator++ () {
+  assert(omap_cur_ != omap_end_);
+  ++omap_cur_;
+  return *this;
+}
+
+Options::iterator Options::iterator::operator++ (int) {
+  const iterator prev(*this);
+  ++(*this);
+  return prev;
 }
 
 }   // namespace coap

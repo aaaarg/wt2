@@ -9,8 +9,10 @@
 #include <vector>
 #include <string>
 #include <algorithm>
-#include <stdexcept>
+#include <iterator>
 #include <map>
+#include <cassert>
+#include <iostream>
 
 #include "utils/log.h"
 #include "coap/proto.h"
@@ -25,6 +27,8 @@ class Option {
   { }
 
   ~Option() = default;
+  Option (const Option&) = default;
+  Option& operator= (const Option&) = default;	
 
   bool IsPayloadMarker() const;
   void MakePayloadMarker();
@@ -49,6 +53,8 @@ class Option {
   bool Decode(size_t&obase, const std::vector<uint8_t>& buf, size_t& offset);
   bool Encode(size_t&obase, std::vector<uint8_t>& buf) const;
 
+  friend std::ostream& operator<< (std::ostream&, const Option&);
+
  private:
   bool DecodeExtended(const std::vector<uint8_t>&, size_t&, size_t&);
 
@@ -58,20 +64,19 @@ class Option {
   std::vector<uint8_t> raw_;
 };
 
-// TODO(tho)
-// interfaces:
-//  add(name==number, value)
-//  encode(to vector)
-//  decode(from vector)
-//  get(name==number) -> value
-//  iterator (provides ordered walk)
-// internals:
-//  std::multimap<name==number, value>  // allows repetition
+// TODO(tho) : see notes in Pukka
 class Options {
+ public:
+  // Allow repeatable Options.
+  typedef std::multimap<OptionNumber, Option> OptionMap;
+
  public:
   Options() = default;
   ~Options() = default;
+  Options (const Options&) = default;
+  Options& operator= (const Options&) = default;	
 
+ public:
   bool AddIfMatch(const std::vector<uint8_t>& etag);
   bool AddUriHost(const std::string& uri_host);
 
@@ -79,8 +84,33 @@ class Options {
   bool Encode(std::vector<uint8_t>& buf) const;
   bool Decode(const std::vector<uint8_t>& buf);
 
+ public:
+  class iterator
+    : public std::iterator<std::input_iterator_tag, Option> {
+
+   private:
+    bool at_end() const;
+
+   public:
+    iterator(OptionMap::iterator begin, OptionMap::iterator end);
+    reference operator* ();
+    bool operator== (const iterator& other) const;
+    bool operator!= (const iterator& other) const;
+    iterator& operator++ ();
+    iterator operator++ (int);
+
+   private:
+    OptionMap::iterator omap_cur_;
+    OptionMap::iterator omap_end_;
+  };
+
+ public:
+  iterator begin();
+  iterator end();
+  size_t count() const;
+
  private:
-  std::multimap<OptionNumber, Option> map_;
+  OptionMap map_;
 };
 
 }   // namespace coap

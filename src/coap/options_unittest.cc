@@ -190,10 +190,13 @@ void test_ok_codec_multi() {
               << '\n';
   }
 #endif
-
   Options opts2;
   assert(opts2.Decode(buf));
+
   // TODO get options and check values.
+  std::cout << opts1.count() << '\n';
+  for (auto it = opts1.begin(); it != opts1.end(); ++it)
+    std::cout << *it << '\n';
 }
 
 int main() {
