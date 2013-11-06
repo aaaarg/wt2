@@ -12,7 +12,7 @@ all: $(UNITTESTS)
 
 proto.o: proto.h
 
-pdu_unittest: pdu.o proto.o pdu_unittest.o $(DEPS)
+pdu_unittest: pdu.o options.o proto.o pdu_unittest.o $(DEPS)
 pdu_unittest.o: $(wildcard *.h)
 pdu.o: $(wildcard *.h)
 

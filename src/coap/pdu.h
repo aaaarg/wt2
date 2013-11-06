@@ -22,13 +22,15 @@ class PDU {
  public:
   // Construct a confirmable empty message by default
   PDU()
-    : version_(Version::v1)
+    : max_message_size_(1152)
+    , version_(Version::v1)
     , type_(Type::CON)
     , token_length_(0)
     , code_(Code::Empty)
     , message_id_(0)
     , token_()
     , options_()
+    , payload_()
   { }
 
   // Construct from binary
@@ -46,6 +48,7 @@ class PDU {
   uint16_t message_id() const { return message_id_; }
   Options options() const { return options_; }
   std::vector<uint8_t> token() const { return token_; }
+  std::vector<uint8_t> payload() const { return payload_; }
 
   // Header fields setter's
   void set_version(Version v) { version_ = v; }
@@ -58,6 +61,11 @@ class PDU {
         std::min(8UL, token.size()),
         std::back_inserter(token_));
   }
+  void set_options(const Options& opts) { options_ = opts; }
+  void set_payload(const std::vector<uint8_t>& payload) { payload_ = payload; }
+
+  bool Encode(std::vector<uint8_t>& buf) const;
+  bool Decode(const std::vector<uint8_t>& buf);
 
   // Serialise header to the end of the given unsigned char buffer
   // (Also add Token which is not strictly header.)
@@ -71,7 +79,12 @@ class PDU {
   friend std::ostream& operator<< (std::ostream&, const PDU&);
 
  private:
-  std::vector<uint8_t> raw_;
+  bool PayloadFits(size_t heading_size, size_t payload_size) const;
+
+ private:
+  std::vector<uint8_t> raw_;  // XXX(tho) needed?
+
+  size_t max_message_size_;
 
   // Fixed Header fields
   Version version_;
@@ -79,11 +92,9 @@ class PDU {
   uint8_t token_length_;
   Code code_;
   uint16_t message_id_;
-
-  // Optional token
   std::vector<uint8_t> token_;
-
   Options options_;
+  std::vector<uint8_t> payload_;
 };
 
 }   // namespace coap

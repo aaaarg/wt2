@@ -4,14 +4,12 @@
 #define COAP_OPTIONS_H_
 
 #include <arpa/inet.h>
-#include <err.h>
 
+#include <map>
 #include <vector>
 #include <string>
 #include <algorithm>
 #include <iterator>
-#include <map>
-#include <cassert>
 #include <iostream>
 
 #include "utils/log.h"
@@ -64,7 +62,6 @@ class Option {
   std::vector<uint8_t> raw_;
 };
 
-// TODO(tho) : see notes in Pukka
 class Options {
  public:
   // Allow repeatable Options.
@@ -95,8 +92,12 @@ class Options {
   bool AddProxyScheme(const std::string& proxy_scheme);
   bool AddSize1(uint64_t sz);
 
+ public:
+  bool LookUp(OptionNumber opt_num, std::vector<Option>& res_set) const;
+
+ public:
   bool Encode(std::vector<uint8_t>& buf) const;
-  bool Decode(const std::vector<uint8_t>& buf);
+  bool Decode(const std::vector<uint8_t>& buf, size_t& offset);
 
  private:
   template <typename Tp>

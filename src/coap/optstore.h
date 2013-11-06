@@ -56,6 +56,9 @@ enum OptionNumber {
   Size1 = 60
 };
 
+//
+// Per-option attributes.
+//
 class OptProp {
  public:
   OptProp(OptionNumber code, bool repeatable, const char* name,
@@ -95,39 +98,39 @@ const std::map<OptionNumber, OptProp> OptStore {
   {
     OptionNumber::If_Match,
     {
-      OptionNumber::If_Match, // No.
-      true,                   // Repeatable
-      "If-Match",             // mnemonic
-      OptionFormat::opaque,   // Format
-      0,                      // min-length
-      8,                      // max-length
-      nullptr                 // Default
+      OptionNumber::If_Match,       // No.
+      true,                         // Repeatable
+      "If-Match",                   // mnemonic
+      OptionFormat::opaque,         // Format
+      0,                            // min-length
+      8,                            // max-length
+      nullptr                       // Default
     }
   },
 
   {
     OptionNumber::Uri_Host,
     {
-      OptionNumber::Uri_Host, // No.
-      false,                  // Repeatable
-      "Uri-Host",             // mnemonic
-      OptionFormat::string,   // Format
-      1,                      // min-length
-      255,                    // max-length
-      nullptr                 // Default
+      OptionNumber::Uri_Host,       // No.
+      false,                        // Repeatable
+      "Uri-Host",                   // mnemonic
+      OptionFormat::string,         // Format
+      1,                            // min-length
+      255,                          // max-length
+      nullptr                       // Default
     }
   },
 
   {
     OptionNumber::ETag,
     {
-      OptionNumber::ETag,     // No.
-      true,                   // Repeatable
-      "ETag",                 // mnemonic
-      OptionFormat::opaque,   // Format
-      1,                      // min-length
-      8,                      // max-length
-      nullptr                 // Default
+      OptionNumber::ETag,           // No.
+      true,                         // Repeatable
+      "ETag",                       // mnemonic
+      OptionFormat::opaque,         // Format
+      1,                            // min-length
+      8,                            // max-length
+      nullptr                       // Default
     }
   },
 
@@ -147,13 +150,13 @@ const std::map<OptionNumber, OptProp> OptStore {
   {
     OptionNumber::Uri_Port,
     {
-      OptionNumber::Uri_Port,   // No.
-      false,                    // Repeatable
-      "Uri-Port",               // mnemonic
-      OptionFormat::uint,       // Format
-      0,                        // min-length
-      2,                        // max-length
-      nullptr                   // Default
+      OptionNumber::Uri_Port,       // No.
+      false,                        // Repeatable
+      "Uri-Port",                   // mnemonic
+      OptionFormat::uint,           // Format
+      0,                            // min-length
+      2,                            // max-length
+      nullptr                       // Default
     }
   },
 
@@ -173,91 +176,91 @@ const std::map<OptionNumber, OptProp> OptStore {
   {
     OptionNumber::Uri_Path,
     {
-      OptionNumber::Uri_Path,   // No.
-      true,                     // Repeatable
-      "Uri-Path",               // mnemonic
-      OptionFormat::string,     // Format
-      0,                        // min-length
-      255,                      // max-length
-      nullptr                   // Default
+      OptionNumber::Uri_Path,       // No.
+      true,                         // Repeatable
+      "Uri-Path",                   // mnemonic
+      OptionFormat::string,         // Format
+      0,                            // min-length
+      255,                          // max-length
+      nullptr                       // Default
     }
   },
 
   {
     OptionNumber::Content_Format,
     {
-      OptionNumber::Content_Format,   // No.
-      false,                          // Repeatable
-      "Content-Format",               // mnemonic
-      OptionFormat::uint,             // Format
-      0,                              // min-length
-      2,                              // max-length
-      nullptr                         // Default
+      OptionNumber::Content_Format, // No.
+      false,                        // Repeatable
+      "Content-Format",             // mnemonic
+      OptionFormat::uint,           // Format
+      0,                            // min-length
+      2,                            // max-length
+      nullptr                       // Default
     }
   },
 
   {
     OptionNumber::Max_Age,
     {
-      OptionNumber::Max_Age,  // No.
-      false,                  // Repeatable
-      "Max-Age",              // mnemonic
-      OptionFormat::uint,     // Format
-      0,                      // min-length
-      4,                      // max-length
-      "60"                    // Default
+      OptionNumber::Max_Age,        // No.
+      false,                        // Repeatable
+      "Max-Age",                    // mnemonic
+      OptionFormat::uint,           // Format
+      0,                            // min-length
+      4,                            // max-length
+      "60"                          // Default
     }
   },
 
   {
     OptionNumber::Uri_Query,
     {
-      OptionNumber::Uri_Query,  // No.
-      true,                     // Repeatable
-      "Uri-Query",              // mnemonic
-      OptionFormat::string,     // Format
-      0,                        // min-length
-      255,                      // max-length
-      nullptr                   // Default
+      OptionNumber::Uri_Query,      // No.
+      true,                         // Repeatable
+      "Uri-Query",                  // mnemonic
+      OptionFormat::string,         // Format
+      0,                            // min-length
+      255,                          // max-length
+      nullptr                       // Default
     }
   },
 
   {
     OptionNumber::Accept,
     {
-      OptionNumber::Accept,   // No.
-      false,                  // Repeatable
-      "Accept",               // mnemonic
-      OptionFormat::uint,     // Format
-      0,                      // min-length
-      2,                      // max-length
-      nullptr                 // Default
+      OptionNumber::Accept,         // No.
+      false,                        // Repeatable
+      "Accept",                     // mnemonic
+      OptionFormat::uint,           // Format
+      0,                            // min-length
+      2,                            // max-length
+      nullptr                       // Default
     }
   },
 
   {
     OptionNumber::Location_Query,
     {
-      OptionNumber::Location_Query,   // No.
-      true,                           // Repeatable
-      "Location-Query",               // mnemonic
-      OptionFormat::string,           // Format
-      0,                              // min-length
-      255,                            // max-length
-      nullptr                         // Default
+      OptionNumber::Location_Query, // No.
+      true,                         // Repeatable
+      "Location-Query",             // mnemonic
+      OptionFormat::string,         // Format
+      0,                            // min-length
+      255,                          // max-length
+      nullptr                       // Default
     }
   },
 
   {
     OptionNumber::Proxy_Uri,
     {
-      OptionNumber::Proxy_Uri,    // No.
-      false,                      // Repeatable
-      "Proxy-Uri",                // mnemonic
-      OptionFormat::string,       // Format
-      1,                          // min-length
-      1034,                       // max-length
-      nullptr                     // Default
+      OptionNumber::Proxy_Uri,      // No.
+      false,                        // Repeatable
+      "Proxy-Uri",                  // mnemonic
+      OptionFormat::string,         // Format
+      1,                            // min-length
+      1034,                         // max-length
+      nullptr                       // Default
     }
   },
 
@@ -277,15 +280,17 @@ const std::map<OptionNumber, OptProp> OptStore {
   {
     OptionNumber::Size1,
     {
-      OptionNumber::Size1,  // No.
-      false,                // Repeatable
-      "Size1",              // mnemonic
-      OptionFormat::uint,   // Format
-      0,                    // min-length
-      4,                    // max-length
-      nullptr               // Default
+      OptionNumber::Size1,          // No.
+      false,                        // Repeatable
+      "Size1",                      // mnemonic
+      OptionFormat::uint,           // Format
+      0,                            // min-length
+      4,                            // max-length
+      nullptr                       // Default
     }
   },
+
+  // TODO(tho) allocate Publish
 };
 
 }   // namespace coap

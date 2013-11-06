@@ -1,11 +1,73 @@
 // Copyleft 2013 tho@autistici.org
 
+#include <cassert>
+
 #include "utils/log.h"
 #include "coap/proto.h"
 #include "coap/options.h"
 #include "coap/pdu.h"
 
 namespace coap {
+
+bool PDU::PayloadFits(size_t heading_size, size_t payload_size) const {
+  if (heading_size >= max_message_size_)
+    return false;
+
+  return payload_size < (max_message_size_ - heading_size);
+}
+
+bool PDU::Encode(std::vector<uint8_t>& buf) const {
+  utils::Log* L = utils::Log::Instance();
+
+  // Mandatory header
+  if (!EncodeHeader(buf))
+    return false;
+
+  // Optional options
+  if (options_.count() > 0 && !options_.Encode(buf))
+    return false;
+
+  // Optional payload
+  if (payload_.size() > 0) {
+    // Must fit the currently set message limit.
+    if (PayloadFits(buf.size(), payload_.size())) {
+      // Add payload marker followed by payload bytes.
+      buf.push_back(0xFF);
+      std::copy(payload_.begin(), payload_.end(), std::back_inserter(buf));
+    } else {
+      L->Debug("message limits (%zu) overrun", max_message_size_);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool PDU::Decode(const std::vector<uint8_t>& buf) {
+  size_t offset = 0;
+
+  if (!DecodeHeader(buf, offset))
+    return false;
+
+  if (offset >= buf.size()) {
+    assert(offset == buf.size());
+    return true;
+  }
+
+  if (!options_.Decode(buf, offset))
+    return false;
+
+  if (offset >= buf.size()) {
+    assert(offset == buf.size());
+    return true;
+  }
+
+  // Copy-in the payload (i.e. everything starting from the current offset
+  // up to the end of the PDU buffer.
+  std::copy(buf.begin() + offset, buf.end(), std::back_inserter(payload_));
+
+  return true;
+}
 
 // Serialise header to the end of the given unsigned char buffer
 // (Also add Token which is not strictly header.)
@@ -79,8 +141,6 @@ bool PDU::DecodeHeader(const std::vector<uint8_t>& buf, size_t& offset) {
     message_id_ = ntohs((buf.at(2) << 8) | buf.at(3));
 
     // We've already checked that buf is at least 4 + token_length.
-    // XXX XXX XXX XXX need a way to get an out_of_range exception
-    //                 while copying
     if (token_length_ > 0)
       std::copy(&buf[4], &buf[4 + token_length_],
                 std::back_inserter(token_));

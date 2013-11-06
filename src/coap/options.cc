@@ -3,6 +3,8 @@
 #include "utils/log.h"
 #include "coap/options.h"
 
+#include <cassert>
+
 namespace coap {
 
 //
@@ -48,7 +50,7 @@ size_t bytes_when_encoded<uint64_t>(const uint64_t& v) {
 bool Option::Encode(size_t& option_base, std::vector<uint8_t>& buf) const {
   utils::Log* L = utils::Log::Instance();
 
-  // handle payload marker
+  // Handle payload marker
   if (format_ == OptionFormat::marker) {
     buf.push_back(0xFF);
     return true;
@@ -349,7 +351,7 @@ std::ostream& operator<< (std::ostream& out, const Option& opt) {
 // class Options
 //
 bool Options::DoAdd(const Option& opt) {
-  // Assume the given option has been validated (XXX should be private?)
+  // Assume the given option has been validated.
   return map_.insert(std::make_pair(opt.num(), opt)) != map_.end();
 }
 
@@ -368,17 +370,13 @@ bool Options::Encode(std::vector<uint8_t>& buf) const {
     }
   }
 
-  // Add payload marker.
-  buf.push_back(0xFF);
-
   return true;
 }
 
-bool Options::Decode(const std::vector<uint8_t>& buf) {
+bool Options::Decode(const std::vector<uint8_t>& buf, size_t& offset) {
   utils::Log* L = utils::Log::Instance();
 
   size_t obase = 0;
-  size_t offset = 0;
   size_t buf_size = buf.size();
 
   while (offset < buf_size) {
@@ -406,13 +404,25 @@ bool Options::Decode(const std::vector<uint8_t>& buf) {
 
 template <typename Tp>
 bool Options::Add(OptionNumber opt_num, const Tp& val) {
+  utils::Log* L = utils::Log::Instance();
+
   size_t needed_bytes = bytes_when_encoded(val);
 
   auto prop = OptStore.find(opt_num)->second;
 
+  // Check value length against Option allowed range.
   if (needed_bytes > prop.max_length() || needed_bytes < prop.min_length()) {
-    utils::Log::Instance()->Debug("out-of-range value len %zu", needed_bytes);
+    L->Debug("out-of-range value size %zu for %s", needed_bytes, prop.name());
     return false;
+  }
+
+  // Check repeatable flag.
+  if (!prop.repeatable()) {
+    std::vector<Option> dummy;
+    if (LookUp(opt_num, dummy)) {
+      L->Debug("trying to add non-repeatable Option %s twice", prop.name());
+      return false;
+    }
   }
 
   Option opt;
@@ -496,6 +506,22 @@ size_t Options::count() const {
   return map_.size();
 }
 
+bool Options::LookUp(OptionNumber num, std::vector<Option>& res) const {
+  auto it_pair = map_.equal_range(num);
+
+  if (it_pair.first == map_.end())
+    return false;
+
+  res.clear();
+
+  // Copy result to res.
+  for (auto it = it_pair.first; it != it_pair.second; ++it) {
+    res.push_back(it->second);  
+  }
+
+  return true;
+}
+
 //
 // class Options::iterator
 //
@@ -503,7 +529,8 @@ bool Options::iterator::at_end() const {
   return omap_cur_ == omap_end_; 
 }
 
-Options::iterator::iterator(OptionMap::iterator begin, OptionMap::iterator end) {
+Options::iterator::iterator(OptionMap::iterator begin,
+                            OptionMap::iterator end) {
   omap_cur_ = begin;
   omap_end_ = end;
 }
